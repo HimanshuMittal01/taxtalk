@@ -11,15 +11,16 @@ import json
 if __name__ == "__main__":
     # Create client
     client = weaviate.Client(
-        url = "http://localhost:8080",
+        url = "http://0.0.0.0:8080",
         additional_headers = {}
     )
 
     # Recreate full database from scratch
     client.schema.delete_class("Circular")
+    client.schema.delete_class("Article")
 
     # Create database for circulars
-    class_obj = {
+    circular_obj_config = {
         "class": "Circular",
         "vectorizer": "text2vec-transformers",
         "moduleConfig": {
@@ -27,9 +28,20 @@ if __name__ == "__main__":
             "generative-openai": {}
         }
     }
-    client.schema.create_class(class_obj)
+    client.schema.create_class(circular_obj_config)
 
-    # Load and add batches to weaviate
+    # Create database for articles
+    circular_obj_config = {
+        "class": "Article",
+        "vectorizer": "text2vec-transformers",
+        "moduleConfig": {
+            "text2vec-openai": {},
+            "generative-openai": {}
+        }
+    }
+    client.schema.create_class(circular_obj_config)
+
+    # Load and add batches to weaviate [CIRCULAR]
     data = None
     with open("input/circulars.json") as f:
         data = json.load(f)
@@ -49,4 +61,27 @@ if __name__ == "__main__":
             batch.add_data_object(
                 data_object=properties,
                 class_name="Circular"
+            )
+    
+    # Load and add batches to weaviate [ARTICLE]
+    data = None
+    with open("input/articles.json") as f:
+        data = json.load(f)
+
+    # Configure batch
+    client.batch.configure(batch_size=100)
+    
+    # Initialize a batch process
+    with client.batch as batch:
+        for d in data["constitution_of_india"]:
+            print(f"importing article: {d['id']}")
+            properties = {
+                "article_id": d["id"],
+                "name": d["name"],
+                "part": d["part"],
+                "description": d["description"],
+            }
+            batch.add_data_object(
+                data_object=properties,
+                class_name="Article"
             )

@@ -5,6 +5,7 @@
  @created on: 06-10-2023 21:39:01
 """
 
+import inspect
 import weaviate
 
 # Connect to client
@@ -19,7 +20,11 @@ def convert_to_template(prompt: str, context: str = "", model_name: str = "TheBl
 
     Follow exactly those 3 steps:
     1. Read the context in the triple quotes below and aggregrate this data
-    Context : """{context}"""
+    Context : 
+        """
+        {context}
+        """
+
     2. Answer the question using only this context
     3. Show the source for your answers
 
@@ -35,22 +40,36 @@ def convert_to_template(prompt: str, context: str = "", model_name: str = "TheBl
     return prompt_template
 
 
-def build_context(matched_docs):
-    pass
+def build_context(response, obj_class: str = "Article") -> str:
+    if obj_class == "Circular":
+        return response["data"]["Get"][obj_class][0]["description"]
+
+    # Get properties
+    name = response["data"]["Get"][obj_class][0]["description"]
+    description = response["data"]["Get"][obj_class][0]["description"]
+    context = inspect.cleandoc(
+        f"""
+        Name: {name}
+        Description: {description}
+        """
+    )
+    return context
 
 
 def asktaxtalk(prompt: str, tokenizer, model) -> str:
     # Find context
+    obj_class = "Article" # Circular
+    obj_properties = ["article_id", "name", "description"] # ["description", "date"]
     response = (
         client.query
-        .get("Circular", ["description", "date"])
+        .get(obj_class, obj_properties)
         .with_near_text({"concepts": [f"{prompt}"]})
         .with_limit(2)
         .do()
     )
 
     # Build context
-    context = response["data"]["Get"]["Circular"][0]["description"]
+    context = build_context(response)
 
     # Convert to template
     prompt_template = convert_to_template(prompt, context)
