@@ -15,7 +15,7 @@ if __name__ == "__main__":
     tokenizer, model = load_model("TheBloke/openOrca-Platypus2-13B-GPTQ")
 
     # User asks a question / prompt
-    question = "Write a draft letter replying to summon without advance information"
+    question = "Who is the king of the jungle?"
 
     # Chatbot generates an answer
     answer = asktaxtalk(question, tokenizer=tokenizer, model=model)
