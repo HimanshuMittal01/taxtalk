@@ -45,7 +45,7 @@ def build_context(response, obj_class: str = "Article") -> str:
         return response["data"]["Get"][obj_class][0]["description"]
 
     # Get properties
-    name = response["data"]["Get"][obj_class][0]["description"]
+    name = response["data"]["Get"][obj_class][0]["name"]
     description = response["data"]["Get"][obj_class][0]["description"]
     context = inspect.cleandoc(
         f"""
@@ -56,14 +56,14 @@ def build_context(response, obj_class: str = "Article") -> str:
     return context
 
 
-def asktaxtalk(prompt: str, tokenizer, model) -> str:
+def asktaxtalk(question: str, tokenizer, model) -> str:
     # Find context
     obj_class = "Article" # Circular
     obj_properties = ["article_id", "name", "description"] # ["description", "date"]
     response = (
         client.query
         .get(obj_class, obj_properties)
-        .with_near_text({"concepts": [f"{prompt}"]})
+        .with_near_text({"concepts": [f"{question}"]})
         .with_limit(2)
         .do()
     )
@@ -72,10 +72,26 @@ def asktaxtalk(prompt: str, tokenizer, model) -> str:
     context = build_context(response)
 
     # Convert to template
-    prompt_template = convert_to_template(prompt, context)
+    prompt = [
+        # {"role": "system", "content": ""},
+        {"role": "user", "content": inspect.cleandoc(
+                f"""
+                You are an assistant that helps draft replies for GST litigation. You have to answer the questions using the provided context. Reference source name wherever needed. If you don't have any context and are unsure of the answer, reply that you don't know about this topic.
+
+                Following context can be considered having 'name' and 'description':
+                {context}
+
+                Question: {question}
+                """
+            )
+        },
+    ]
+    # prompt = convert_to_template(question, context)
+
+    # Encode prompt
+    input_ids = tokenizer.apply_chat_template(prompt, return_tensors="pt").cuda()
 
     # Model inference
-    input_ids = tokenizer(prompt_template, return_tensors='pt').input_ids.cuda()
     output = model.generate(inputs=input_ids, temperature=0.7, do_sample=True, top_p=0.95, top_k=40, max_new_tokens=512)
 
     # Decode answer

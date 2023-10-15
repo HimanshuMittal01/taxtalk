@@ -12,7 +12,8 @@ from taxtalk.ask import asktaxtalk
 
 if __name__ == "__main__":
     # Load model
-    tokenizer, model = load_model("TheBloke/openOrca-Platypus2-13B-GPTQ")
+    MODEL_NAME = "TheBloke/Mistral-7B-OpenOrca-GPTQ" # "TheBloke/openOrca-Platypus2-13B-GPTQ" "mistralai/Mistral-7B-Instruct-v0.1"
+    tokenizer, model = load_model(model_name=MODEL_NAME)
 
     # User asks a question / prompt
     question = "A british reporter said that India is a union of religion. Is this statement true?"
